@@ -25,7 +25,7 @@ def convert_sprite(data: bytes, out: BinaryIO) -> None:
     out.write(png_chunk(b'IEND', b''))
 
 
-def png_chunk(tag, data):
+def png_chunk(tag: bytes, data: bytes) -> bytes:
     prefix = struct.pack('>I', len(data))
     suffix = struct.pack('>I', zlib.crc32(tag+data) & 0xffffffff)
     return prefix + tag + data + suffix
