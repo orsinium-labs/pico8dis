@@ -10,13 +10,28 @@ def run(stdin: TextIO) -> int:
     parser.add_argument('-o', '--output', default='game')
     args = parser.parse_args(sys.argv[1:])
     out = Path(args.output)
-    out.mkdir(exist_ok=True)
 
     js = stdin.read()
     if '_cartdat' in js:
         data = extract_data(js)
     else:
         data = js.encode(encoding='utf8')
+
+    # A file path is given; extract only matching game component.
+    if out.suffix == '.bin':
+        out.write_bytes(data)
+        return 0
+    if out.suffix == '.lua':
+        lua = decompress_lua(data)
+        out.write_text(lua)
+        return 0
+    if out.suffix == '.png':
+        with out.open('wb') as stream:
+            convert_sprite(data, stream)
+        return 0
+
+    # A directory path is given; extract all game components.
+    out.mkdir(exist_ok=True)
     lua = decompress_lua(data)
     (out / 'code.lua').write_text(lua)
     with (out / 'sprites.png').open('wb') as stream:
