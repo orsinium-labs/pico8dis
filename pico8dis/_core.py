@@ -35,10 +35,11 @@ def decompress_lua(data: bytes) -> str:
     assert len(data) == 0x8000
     data = data[0x4300:]
     if data[:4] == b'\x00pxa':
-        return _decompress_lua_new(data).decode(encoding='utf8')
+        lua = _decompress_lua_new(data)
     else:
         assert data[:4] == b':c:\x00'
-        return _decompress_lua_old(data).decode(encoding='utf8')
+        lua = _decompress_lua_old(data)
+    return _decode_lua(lua)
 
 
 def _decompress_lua_new(data: bytes) -> bytearray:
@@ -103,6 +104,28 @@ def _decompress_lua_old(data: bytes) -> bytearray:
         end = start + length
         out.extend(out[start:end])
     return out
+
+
+def _decode_lua(raw: bytearray) -> str:
+    """Convert raw PICO-8 Lua code into valid UTF-8.
+
+    https://pico-8.fandom.com/wiki/P8SCII
+    """
+    res = []
+    for b in raw:
+        if b >= 254:
+            res.append('◜◝'[b-254])
+        elif b >= 204:
+            res.append('アイウエオカキクケコサシスセソタチツテトナニヌネノ'[b-204])
+        elif b >= 178:
+            res.append('あいうえおかきくけこさしすせそたちつてとなにぬねの'[b-178])
+        elif b >= 127:
+            res.append('○█▒🐱⬇️░✽●♥☉웃⌂⬅️😐♪🅾️◆…➡️★⧗⬆️ˇ∧❎▤▥'[b-127])
+        elif b >= 16 and b < 32:
+            res.append('▮■□⁙⁘‖◀▶「」¥•、。゛゜'[b-16])
+        else:
+            res.append(chr(b))
+    return ''.join(res)
 
 
 @dataclass
