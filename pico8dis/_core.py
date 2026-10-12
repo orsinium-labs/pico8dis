@@ -32,13 +32,16 @@ def png_chunk(tag: bytes, data: bytes) -> bytes:
 
 
 def decompress_lua(data: bytes) -> str:
-    return _decompress_lua_bin(data).decode(encoding='utf8')
-
-
-def _decompress_lua_bin(data: bytes) -> bytearray:
     assert len(data) == 0x8000
     data = data[0x4300:]
-    assert data[:4] == b'\0pxa'
+    if data[:4] == b'\x00pxa':
+        return _decompress_lua_new(data).decode(encoding='utf8')
+    else:
+        assert data[:4] == b':c:\x00'
+        return _decompress_lua_old(data).decode(encoding='utf8')
+
+
+def _decompress_lua_new(data: bytes) -> bytearray:
     raw_len, comp_len = struct.unpack('>HH', data[4:8])
     reader = Reader(data=data[:comp_len])
     out = bytearray()
@@ -76,6 +79,29 @@ def _decompress_lua_bin(data: bytes) -> bytearray:
                 for _ in range(length):
                     out.append(out[-distance])
         assert len(out) <= raw_len
+    return out
+
+
+def _decompress_lua_old(data: bytes) -> bytearray:
+    (raw_len,) = struct.unpack('>H', data[4:6])
+    lookup = b'\n 0123456789abcdefghijklmnopqrstuvwxyz!#%(){}[]<>+=/*:;.,~_'
+    stream = iter(data[8:])
+    out = bytearray()
+    while len(out) < raw_len:
+        b = next(stream)
+        if b == 0x00:
+            out.append(next(stream))
+            continue
+        if b <= 0x3b:
+            out.append(lookup[b-1])
+            continue
+        next_byte = next(stream)
+        offset = (b - 0x3c) * 16 + (next_byte & 0xf)
+        length = (next_byte >> 4) + 2
+        assert length <= offset
+        start = len(out)-offset
+        end = start + length
+        out.extend(out[start:end])
     return out
 
 
