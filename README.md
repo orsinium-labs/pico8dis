@@ -7,6 +7,6 @@ Disassembler for [PICO-8](https://www.lexaloffle.com/pico-8.php) binary distribu
 ```bash
 git clone https://github.com/orsinium-labs/pico8dis
 cd pico8dis
-cat some_game.js | python3 pico8dis --output some_game
+cat some_game.js | python3 -m pico8dis --output some_game
 cat some_game/code.lua
 ```
